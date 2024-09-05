@@ -117,9 +117,6 @@ def save_user_info():
 
         # Kiểm tra nếu thiếu thông tin bắt buộc
         if not all([phone_number, city, phone_type, game_port, ip_address]):
-            error_message = 'Thiếu một số thông tin bắt buộc.'
-            connection = create_connection()
-            save_error_to_db(connection, phone_number, city, phone_type, game_port, ip_address, error_message)
             return jsonify({'message': 'Thiếu thông tin, đã lưu lại lỗi'}), 400
 
         # Kết nối đến MySQL
